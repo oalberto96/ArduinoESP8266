@@ -99,7 +99,7 @@ void setup()
 
 void loop()
 {
-
+    
     Serial.println("Waiting...");
     sendHttpRequest(http_header,5,http_body);
     /*if(statusConnection()){
