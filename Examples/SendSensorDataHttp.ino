@@ -9,6 +9,7 @@ Content-Length: 26
 humidity=13&temperature=25
 AT+CIPCLOSE
 */
+#include <SoftwareSerial.h>
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~| Sensor |~~~~~~~~~~~~~~~~~~~~~~*/
 #include <DHT.h>
 #define DHTPIN 2
@@ -20,9 +21,11 @@ DHT dht(DHTPIN, DHTTYPE);
 #define VAPORIZADOR 10
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|Wifi Headers|~~~~~~~~~~~~~~~~~~~~*/
-#include <SoftwareSerial.h>
+
 SoftwareSerial esp8266(2,3);
 #define BAUD 9600
+const char* WIFI_SSID = "SSID";
+const char* PASSWORD = "Pasw0RD";
 const char* HOST = "10.0.0.2";
 const char* PORT = "8000";
 const char* TYPE_CONNECTION = "TCP";
@@ -37,6 +40,12 @@ String http_header[] = {
 };
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~| Wifi Functions|~~~~~~~~~~~~~~~~~~~~~~~*/
 
+void establishConnection(String ssid, String password) {
+    //AT+CWJAP="my-test-wifi","1234test"
+    String command = String("AT+CWJAP=") + "\""+ ssid+"\"" +"," + "\"" + password + "\"";
+    esp8266.println(command);
+}
+
 String getHttpBody(float h, float t){
     //body humidity=13.5&temperature=25.4
     String http_body="humidity=" + String(h) + "&" + "temperature=" + t + "\n";
@@ -47,7 +56,7 @@ String getHttpBody(float h, float t){
 
 void sendHttpRequest(String http_header[],int size_http_header, String body) {
     String http_message;
-    establishConnection(TYPE_CONNECTION, HOST, PORT);
+    establishTCPConnection(TYPE_CONNECTION, HOST, PORT);
     delay(20);
     for (int i = 0; i < size_http_header; i++) {
         http_message.concat(http_header[i]);
@@ -78,7 +87,7 @@ bool statusConnection(){
     response = esp8266Listener();
     return findText(response,status);
 }
-void establishConnection(String type, String ip_address, String port) {
+void establishTCPConnection(String type, String ip_address, String port) {
     String command = String("AT+CIPSTART=") + "\""+ type+"\"" +"," + "\"" +ip_address + "\"" + "," + port;
     esp8266.println(command);
 }
@@ -145,6 +154,9 @@ void setup()
     Serial.begin(BAUD);
     //Wifi
     esp8266.begin(BAUD);
+    establishConnection(WIFI_SSID, PASSWORD);
+
+    delay(3000);
     //Sensor
     dht.begin();
     //Actuators
@@ -170,6 +182,7 @@ void loop()
     //control(h,t);
     String http_body = getHttpBody(h,t);
     sendHttpRequest(http_header,5,http_body);
+    Serial.println(esp8266Listener());
 
     delay(3000);
 }
